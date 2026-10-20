@@ -688,17 +688,6 @@
         `;
         area.appendChild(chips);
       }
-      // If bot asks for Mock KYC details (Name & DL)
-      else if ((lower.includes('mock kyc') || lower.includes('kyc')) && (lower.includes('licence') || lower.includes('license') || lower.includes('dl'))) {
-        const chips = document.createElement('div');
-        chips.className = 'quick-chips';
-        chips.innerHTML = `
-          <button class="chip-btn" onclick="sendQuickText('My name is Rajesh, and I have a valid Commercial DL')">📄 Valid Commercial DL</button>
-          <button class="chip-btn" onclick="sendQuickText('My name is Amit, and I have a valid Private LMV DL')">🚗 Valid Private LMV</button>
-          <button class="chip-btn" onclick="sendQuickText('I do not have a driving license yet')">❌ No License</button>
-        `;
-        area.appendChild(chips);
-      }
       // If bot asks for hub (Gurgaon or Bangalore)
       else if ((lower.includes('gurgaon') || lower.includes('delhi')) && lower.includes('bangalore') && (lower.includes('drive') || lower.includes('city') || lower.includes('hub') || lower.includes('looking'))) {
         const chips = document.createElement('div');
