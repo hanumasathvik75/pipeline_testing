@@ -25,7 +25,7 @@ def get_client():
         raise ValueError("GROQ_API_KEY environment variable is not set. Please add it in Vercel Project Settings.")
     return Groq(api_key=api_key)
 
-AVAILABLE_MODELS = ["openai/gpt-oss-120b", "openai/gpt-oss-20b", "qwen/qwen3.8-27b"]
+AVAILABLE_MODELS = ["qwen/qwen3.8-27b", "openai/gpt-oss-120b", "openai/gpt-oss-20b"]
 
 def call_groq(messages, max_tokens=800, temperature=0.6):
     client = get_client()
@@ -41,7 +41,7 @@ def call_groq(messages, max_tokens=800, temperature=0.6):
         except Exception as e:
             last_err = e
             err_str = str(e).lower()
-            if "429" in err_str or "rate_limit" in err_str or "limit" in err_str or "not found" in err_str:
+            if any(k in err_str for k in ["429", "rate_limit", "limit", "not found", "tool_use_failed", "tool choice", "400"]):
                 continue
             raise e
     raise last_err
@@ -354,7 +354,20 @@ def chat():
         )
         assistant_reply = response.choices[0].message.content.strip()
     except Exception as e:
-        return jsonify({"error": f"LLM error: {str(e)}"}), 500
+        err_str = str(e)
+        if "failed_generation" in err_str:
+            match = re.search(r'"arguments":\s*(?:"(.*?)"|(.*?)\}\'\}\})', err_str, re.DOTALL)
+            if match:
+                recovered = match.group(1) or match.group(2)
+                if recovered and len(recovered.strip()) > 5:
+                    assistant_reply = recovered.strip().replace('\\n', '\n').replace('\\"', '"')
+                    messages.append({"role": "assistant", "content": assistant_reply})
+                    session["messages"] = messages
+                    return jsonify({
+                        "reply": assistant_reply,
+                        "message_count": len([m for m in messages if m["role"] == "user"])
+                    })
+        return jsonify({"error": f"LLM error: {err_str}"}), 500
 
     messages.append({"role": "assistant", "content": assistant_reply})
     session["messages"] = messages
