@@ -127,39 +127,107 @@
     }
     .header .reset-btn:hover { background: rgba(255,255,255,0.25); }
 
-    /* ── Quick Location Pills ── */
+    /* ── Quick Location & Mode Bar ── */
     .hub-banner {
-      background: #eef7f2;
-      padding: 6px 12px;
+      background: #f0f7f3;
+      padding: 7px 12px;
       display: flex;
       justify-content: space-between;
       align-items: center;
+      gap: 6px;
       font-size: 11px;
       color: #0d4a34;
       border-bottom: 1px solid #d7ebe1;
+      overflow-x: auto;
     }
-    .hub-badge {
+    .hub-banner-left {
+      display: flex;
+      align-items: center;
+      gap: 5px;
+      flex-wrap: nowrap;
+    }
+    .mode-btn {
       background: #ffffff;
-      padding: 2px 8px;
-      border-radius: 10px;
+      border: 1px solid #25d366;
+      border-radius: 12px;
+      padding: 3px 8px;
+      font-size: 11px;
       font-weight: 600;
-      border: 1px solid #c2e2d0;
+      color: #075e54;
+      cursor: pointer;
+      transition: all 0.15s ease;
+      white-space: nowrap;
+      display: inline-flex;
+      align-items: center;
+      gap: 3px;
+    }
+    .mode-btn:hover {
+      background: #075e54;
+      color: #ffffff;
+      border-color: #075e54;
+    }
+    .hub-btn {
+      background: #ffffff;
+      border: 1px solid #bbf7d0;
+      border-radius: 12px;
+      padding: 3px 7px;
+      font-size: 10.5px;
+      font-weight: 500;
+      color: #166534;
+      cursor: pointer;
+      transition: all 0.15s ease;
+      white-space: nowrap;
+    }
+    .hub-btn:hover {
+      background: #166534;
+      color: #ffffff;
     }
     .lang-btn {
       background: #ffffff;
       border: 1px solid #c2e2d0;
       border-radius: 10px;
-      padding: 2px 7px;
+      padding: 3px 7px;
       font-size: 10.5px;
       font-weight: 600;
       color: #075e54;
       cursor: pointer;
       transition: all 0.15s ease;
+      white-space: nowrap;
     }
     .lang-btn:hover {
       background: #075e54;
       color: #ffffff;
       border-color: #075e54;
+    }
+
+    /* Quick Reply Action Chips inside chat */
+    .quick-chips {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+      margin: 4px 0 6px 0;
+      animation: fadeUp 0.2s ease;
+    }
+    .chip-btn {
+      background: #ffffff;
+      border: 1.5px solid #25d366;
+      color: #075e54;
+      border-radius: 18px;
+      padding: 6px 12px;
+      font-size: 12.5px;
+      font-weight: 600;
+      cursor: pointer;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.06);
+      transition: all 0.15s ease;
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+    }
+    .chip-btn:hover {
+      background: #25d366;
+      color: #ffffff;
+      transform: translateY(-1px);
+      box-shadow: 0 3px 8px rgba(37,211,102,0.25);
     }
 
     /* ── Chat area ── */
@@ -502,16 +570,17 @@
     </div>
   </div>
 
-  <!-- Hub Banner with Language Selector -->
+  <!-- Quick Selector Banner (Driver Onboarding & Ride Booking) -->
   <div class="hub-banner">
-    <div>
-      <span>📍 Hubs:</span>
-      <span class="hub-badge">Gurgaon</span>
-      <span class="hub-badge">Bangalore</span>
+    <div class="hub-banner-left">
+      <button class="mode-btn" onclick="selectOption('1')" title="1. Driver Onboarding">🚗 1. Driver</button>
+      <button class="mode-btn" onclick="selectOption('2')" title="2. Book a Ride">🚖 2. Book Ride</button>
+      <button class="hub-btn" onclick="selectHub('Gurgaon')" title="Gurgaon Hub (Delhi-NCR)">📍 Gurgaon</button>
+      <button class="hub-btn" onclick="selectHub('Bangalore')" title="Bangalore Hub (Pilot)">📍 Bangalore</button>
     </div>
     <div style="display:flex; gap:4px; align-items:center;">
-      <button class="lang-btn" onclick="setLang('English')" title="Chat in English">🇬🇧 English</button>
-      <button class="lang-btn" onclick="setLang('Hindi')" title="Chat in Hindi">🇮🇳 हिंदी</button>
+      <button class="lang-btn" onclick="setLang('English')" title="Chat in English">🇬🇧 EN</button>
+      <button class="lang-btn" onclick="setLang('Hindi')" title="Chat in Hindi">🇮🇳 HI</button>
     </div>
   </div>
 
@@ -563,7 +632,69 @@
     row.className = `msg-row ${role}`;
     row.innerHTML = `<div class="bubble">${escapeHtml(text)}<span class="time">${now()}</span></div>`;
     area.appendChild(row);
+
+    // Dynamic Quick Reply Chips
+    if (role === 'bot') {
+      const lower = text.toLowerCase();
+      // If bot is presenting Options 1 and 2
+      if ((lower.includes('1.') || lower.includes('1️⃣')) && (lower.includes('2.') || lower.includes('2️⃣')) && (lower.includes('driver') || lower.includes('ride') || lower.includes('onboard') || lower.includes('inquire'))) {
+        const chips = document.createElement('div');
+        chips.className = 'quick-chips';
+        chips.innerHTML = `
+          <button class="chip-btn" onclick="selectOption('1')">🚗 1. Driver Onboarding</button>
+          <button class="chip-btn" onclick="selectOption('2')">🚖 2. Book a Ride</button>
+        `;
+        area.appendChild(chips);
+      }
+      // If bot asks for hub (Gurgaon or Bangalore)
+      else if ((lower.includes('gurgaon') || lower.includes('delhi')) && lower.includes('bangalore') && (lower.includes('drive') || lower.includes('city') || lower.includes('hub') || lower.includes('looking'))) {
+        const chips = document.createElement('div');
+        chips.className = 'quick-chips';
+        chips.innerHTML = `
+          <button class="chip-btn" onclick="selectHub('Gurgaon')">📍 1. Gurgaon (Delhi-NCR)</button>
+          <button class="chip-btn" onclick="selectHub('Bangalore')">📍 2. Bangalore (Pilot)</button>
+        `;
+        area.appendChild(chips);
+      }
+      // If bot asks to confirm ride booking
+      else if (lower.includes('confirm') && (lower.includes('fare') || lower.includes('booking') || lower.includes('ride') || lower.includes('kiraya'))) {
+        const chips = document.createElement('div');
+        chips.className = 'quick-chips';
+        chips.innerHTML = `
+          <button class="chip-btn" onclick="sendQuickText('Yes, please confirm my ride! 🚖')">✅ Confirm Booking</button>
+          <button class="chip-btn" onclick="sendQuickText('No, cancel this quote')">❌ Cancel</button>
+        `;
+        area.appendChild(chips);
+      }
+    }
+
     scrollBottom();
+  }
+
+  function sendQuickText(txt) {
+    const input = document.getElementById('msgInput');
+    input.value = txt;
+    sendMessage();
+  }
+
+  function selectOption(opt) {
+    const input = document.getElementById('msgInput');
+    if (opt === '1') {
+      input.value = '1. To inquire and onboard as a driver';
+    } else if (opt === '2') {
+      input.value = '2. To book a ride';
+    }
+    sendMessage();
+  }
+
+  function selectHub(hub) {
+    const input = document.getElementById('msgInput');
+    if (hub === 'Gurgaon') {
+      input.value = 'I want to drive in Delhi-NCR (Gurgaon Hub)';
+    } else if (hub === 'Bangalore') {
+      input.value = '2. I want to drive in Bangalore as a Pilot. What are the ride and plan details?';
+    }
+    sendMessage();
   }
 
   function escapeHtml(text) {
@@ -700,34 +831,45 @@
     const posHtml = (d.key_positives || []).map(p => `<span class="tag">✅ ${escapeHtml(p)}</span>`).join('');
     const conHtml = (d.key_concerns || []).map(c => `<span class="tag concern">⚠️ ${escapeHtml(c)}</span>`).join('');
 
-    const licenseBadge = d.has_original_license === true
-      ? '<span style="color:#16a34a; font-weight:700;">✔ Original Available</span>'
-      : (d.has_original_license === false
-        ? '<span style="color:#dc2626; font-weight:700;">✖ No License</span>'
-        : '<span style="color:#64748b;">Not Confirmed</span>');
+    const isRide = (d.service_type === 'Passenger Ride Booking') || (d.ride_booking && d.ride_booking.is_ride_booking);
 
-    document.getElementById('modalContent').innerHTML = `
-      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;">
-        <span class="badge ${categoryBadgeClass(d.lead_category)}">${escapeHtml(d.lead_category || 'Lead')}</span>
-        <span style="font-size:12px; color:#64748b;">Sentiment: <strong>${escapeHtml(d.sentiment || '—')}</strong></span>
-      </div>
+    let gridHtml = '';
+    if (isRide && d.ride_booking) {
+      const rb = d.ride_booking;
+      gridHtml = `
+        <div class="meta-item">
+          <div class="m-label">Service Type</div>
+          <div class="m-value" style="color:#075e54; font-weight:700;">🚖 Passenger Ride Booking</div>
+        </div>
+        <div class="meta-item">
+          <div class="m-label">Booking Status</div>
+          <div class="m-value" style="color:#16a34a; font-weight:700;">${escapeHtml(rb.booking_status || 'Quoted')}</div>
+        </div>
+        <div class="meta-item" style="grid-column: span 2;">
+          <div class="m-label">Pickup Location</div>
+          <div class="m-value" style="font-size:12px;">📍 ${escapeHtml(rb.pickup_location || 'Not provided')}</div>
+        </div>
+        <div class="meta-item" style="grid-column: span 2;">
+          <div class="m-label">Drop Location</div>
+          <div class="m-value" style="font-size:12px;">🏁 ${escapeHtml(rb.drop_location || 'Not provided')}</div>
+        </div>
+        <div class="meta-item">
+          <div class="m-label">Estimated Distance</div>
+          <div class="m-value">${escapeHtml(rb.estimated_distance || '—')}</div>
+        </div>
+        <div class="meta-item">
+          <div class="m-label">Estimated Fare</div>
+          <div class="m-value" style="color:#0d4a34; font-weight:700;">${escapeHtml(rb.estimated_fare || '—')}</div>
+        </div>
+      `;
+    } else {
+      const licenseBadge = d.has_original_license === true
+        ? '<span style="color:#16a34a; font-weight:700;">✔ Original Available</span>'
+        : (d.has_original_license === false
+          ? '<span style="color:#dc2626; font-weight:700;">✖ No License</span>'
+          : '<span style="color:#64748b;">Not Confirmed</span>');
 
-      <div class="scores">
-        <div class="score-card ${scoreClass(d.interest_score || 0)}">
-          <div class="label">Interest</div>
-          <div class="value">${d.interest_score ?? '—'}</div>
-        </div>
-        <div class="score-card ${scoreClass(d.eligibility_score || 0)}">
-          <div class="label">Eligibility</div>
-          <div class="value">${d.eligibility_score ?? '—'}</div>
-        </div>
-        <div class="score-card ${scoreClass(d.overall_score || 0)}">
-          <div class="label">Overall</div>
-          <div class="value">${d.overall_score ?? '—'}</div>
-        </div>
-      </div>
-
-      <div class="meta-grid">
+      gridHtml = `
         <div class="meta-item">
           <div class="m-label">Target Hub</div>
           <div class="m-value">${escapeHtml(d.target_hub || 'Unspecified')}</div>
@@ -768,6 +910,32 @@
           <div class="m-label">Owns Personal Vehicle?</div>
           <div class="m-value" style="font-size:12px;">${d.owns_vehicle === true ? 'Yes' : (d.owns_vehicle === false ? 'No (Milo provides)' : 'Not mentioned')}</div>
         </div>
+      `;
+    }
+
+    document.getElementById('modalContent').innerHTML = `
+      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;">
+        <span class="badge ${categoryBadgeClass(d.lead_category)}">${escapeHtml(d.lead_category || 'Lead')}</span>
+        <span style="font-size:12px; color:#64748b;">Sentiment: <strong>${escapeHtml(d.sentiment || '—')}</strong></span>
+      </div>
+
+      <div class="scores">
+        <div class="score-card ${scoreClass(d.interest_score || 0)}">
+          <div class="label">Interest</div>
+          <div class="value">${d.interest_score ?? '—'}</div>
+        </div>
+        <div class="score-card ${scoreClass(d.eligibility_score || 0)}">
+          <div class="label">Eligibility</div>
+          <div class="value">${d.eligibility_score ?? '—'}</div>
+        </div>
+        <div class="score-card ${scoreClass(d.overall_score || 0)}">
+          <div class="label">Overall</div>
+          <div class="value">${d.overall_score ?? '—'}</div>
+        </div>
+      </div>
+
+      <div class="meta-grid">
+        ${gridHtml}
       </div>
 
       ${posHtml ? `<div class="section-title">Key Strengths</div><div class="tag-list">${posHtml}</div>` : ''}
