@@ -1,0 +1,811 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Milo Drive | AI Driver Onboarding</title>
+  <style>
+    /* ── Reset & Base ── */
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+      background: #f7f9fa; /* Clean modern white/light background */
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 16px;
+    }
+
+    .app-title-bar {
+      margin-bottom: 12px;
+      text-align: center;
+    }
+    .app-title-bar h1 {
+      font-size: 19px;
+      color: #0b251a;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+    }
+    .app-title-bar p {
+      font-size: 13px;
+      color: #5c6b73;
+      margin-top: 2px;
+    }
+
+    /* ── Phone wrapper ── */
+    .phone {
+      width: 440px;
+      max-width: 100%;
+      height: 86vh;
+      max-height: 800px;
+      display: flex;
+      flex-direction: column;
+      border-radius: 20px;
+      overflow: hidden;
+      box-shadow: 0 12px 48px rgba(0,0,0,0.12), 0 2px 8px rgba(0,0,0,0.06);
+      background: #ffffff;
+      border: 1px solid #e1e7ec;
+    }
+
+    /* ── Header ── */
+    .header {
+      background: #075e54;
+      color: #ffffff;
+      padding: 12px 16px;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      flex-shrink: 0;
+    }
+    .header .avatar {
+      width: 42px;
+      height: 42px;
+      border-radius: 50%;
+      background: #25d366;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 22px;
+      box-shadow: 0 2px 6px rgba(0,0,0,0.2);
+    }
+    .header .info {
+      flex: 1;
+      min-width: 0;
+    }
+    .header .info .name {
+      font-weight: 700;
+      font-size: 15px;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+    .header .info .name .verified {
+      color: #25d366;
+      font-size: 13px;
+    }
+    .header .info .sub {
+      font-size: 12px;
+      opacity: 0.9;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .header-actions {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .header .analyze-btn {
+      background: #25d366;
+      color: #ffffff;
+      border: none;
+      padding: 7px 13px;
+      border-radius: 18px;
+      font-size: 12px;
+      font-weight: 600;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 4px;
+      transition: background 0.15s ease, transform 0.1s ease;
+    }
+    .header .analyze-btn:hover { background: #20ba5a; transform: translateY(-1px); }
+    .header .reset-btn {
+      background: rgba(255,255,255,0.15);
+      color: #fff;
+      border: none;
+      padding: 7px 10px;
+      border-radius: 18px;
+      font-size: 12px;
+      cursor: pointer;
+      transition: background 0.15s;
+    }
+    .header .reset-btn:hover { background: rgba(255,255,255,0.25); }
+
+    /* ── Quick Location Pills ── */
+    .hub-banner {
+      background: #eef7f2;
+      padding: 6px 12px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-size: 11px;
+      color: #0d4a34;
+      border-bottom: 1px solid #d7ebe1;
+    }
+    .hub-badge {
+      background: #ffffff;
+      padding: 2px 8px;
+      border-radius: 10px;
+      font-weight: 600;
+      border: 1px solid #c2e2d0;
+    }
+    .lang-btn {
+      background: #ffffff;
+      border: 1px solid #c2e2d0;
+      border-radius: 10px;
+      padding: 2px 7px;
+      font-size: 10.5px;
+      font-weight: 600;
+      color: #075e54;
+      cursor: pointer;
+      transition: all 0.15s ease;
+    }
+    .lang-btn:hover {
+      background: #075e54;
+      color: #ffffff;
+      border-color: #075e54;
+    }
+
+    /* ── Chat area ── */
+    .chat-area {
+      flex: 1;
+      overflow-y: auto;
+      padding: 14px 14px;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      background: #efeae2; /* Authentic WhatsApp light doodle background tone */
+      background-image: radial-gradient(#dfd7cc 0.8px, transparent 0.8px);
+      background-size: 14px 14px;
+      scroll-behavior: smooth;
+    }
+
+    /* ── Messages ── */
+    .msg-row {
+      display: flex;
+      animation: fadeUp 0.18s ease;
+    }
+    @keyframes fadeUp {
+      from { opacity: 0; transform: translateY(6px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+    .msg-row.bot  { justify-content: flex-start; }
+    .msg-row.user { justify-content: flex-end; }
+
+    .bubble {
+      max-width: 82%;
+      padding: 9px 13px;
+      border-radius: 12px;
+      font-size: 14px;
+      line-height: 1.48;
+      position: relative;
+      word-break: break-word;
+    }
+    .msg-row.bot .bubble {
+      background: #ffffff;
+      border-top-left-radius: 3px;
+      box-shadow: 0 1px 2px rgba(0,0,0,0.08);
+      color: #111b21;
+    }
+    .msg-row.user .bubble {
+      background: #d9fdd3; /* WhatsApp user bubble green */
+      border-top-right-radius: 3px;
+      box-shadow: 0 1px 2px rgba(0,0,0,0.08);
+      color: #111b21;
+    }
+    .bubble .time {
+      font-size: 10px;
+      color: #667781;
+      float: right;
+      margin-left: 12px;
+      margin-top: 4px;
+    }
+
+    /* Typing indicator */
+    .typing-bubble {
+      background: #ffffff;
+      border-radius: 12px;
+      border-top-left-radius: 3px;
+      padding: 11px 15px;
+      display: inline-flex;
+      gap: 4px;
+      align-items: center;
+      box-shadow: 0 1px 2px rgba(0,0,0,0.08);
+    }
+    .typing-bubble span {
+      width: 6px;
+      height: 6px;
+      background: #8696a0;
+      border-radius: 50%;
+      animation: bounce 0.8s infinite;
+    }
+    .typing-bubble span:nth-child(2) { animation-delay: 0.15s; }
+    .typing-bubble span:nth-child(3) { animation-delay: 0.30s; }
+    @keyframes bounce {
+      0%, 80%, 100% { transform: translateY(0); }
+      40%            { transform: translateY(-5px); }
+    }
+
+    /* ── Input bar ── */
+    .input-bar {
+      background: #f0f2f5;
+      padding: 10px 12px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      flex-shrink: 0;
+      border-top: 1px solid #e1e7ec;
+    }
+    .input-bar textarea {
+      flex: 1;
+      border: 1px solid #d9dfe4;
+      border-radius: 22px;
+      padding: 10px 16px;
+      font-size: 14px;
+      resize: none;
+      outline: none;
+      background: #ffffff;
+      max-height: 90px;
+      line-height: 1.4;
+      font-family: inherit;
+      color: #111b21;
+    }
+    .input-bar textarea:focus {
+      border-color: #25d366;
+    }
+    .send-btn {
+      width: 42px;
+      height: 42px;
+      border-radius: 50%;
+      background: #075e54;
+      border: none;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+      transition: background 0.15s ease;
+    }
+    .send-btn:hover { background: #0b7367; }
+    .send-btn svg { width: 19px; height: 19px; fill: #ffffff; }
+
+    /* ── Date chip ── */
+    .date-chip {
+      text-align: center;
+      font-size: 11px;
+      color: #54656f;
+      background: rgba(255,255,255,0.85);
+      border-radius: 8px;
+      padding: 3px 10px;
+      align-self: center;
+      margin: 4px 0;
+      box-shadow: 0 1px 1px rgba(0,0,0,0.05);
+    }
+
+    /* ── Modal overlay ── */
+    .modal-overlay {
+      display: none;
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,0.55);
+      z-index: 100;
+      align-items: center;
+      justify-content: center;
+      padding: 16px;
+    }
+    .modal-overlay.open { display: flex; }
+    .modal {
+      background: #ffffff;
+      border-radius: 16px;
+      width: 460px;
+      max-width: 95vw;
+      max-height: 88vh;
+      overflow-y: auto;
+      padding: 24px;
+      box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+      animation: popIn 0.22s ease;
+    }
+    @keyframes popIn {
+      from { transform: scale(0.92); opacity: 0; }
+      to   { transform: scale(1); opacity: 1; }
+    }
+    .modal-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 16px;
+      border-bottom: 1px solid #edf1f4;
+      padding-bottom: 10px;
+    }
+    .modal-header h2 {
+      color: #075e54;
+      font-size: 18px;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    /* Score cards */
+    .scores {
+      display: flex;
+      gap: 10px;
+      margin-bottom: 16px;
+    }
+    .score-card {
+      flex: 1;
+      background: #f8fafb;
+      border-radius: 12px;
+      padding: 10px;
+      text-align: center;
+      border: 2px solid #e2e8f0;
+    }
+    .score-card .label {
+      font-size: 11px;
+      color: #64748b;
+      margin-bottom: 4px;
+      text-transform: uppercase;
+      font-weight: 600;
+    }
+    .score-card .value {
+      font-size: 26px;
+      font-weight: 800;
+    }
+    .score-high { color: #16a34a; border-color: #86efac; background: #f0fdf4; }
+    .score-mid  { color: #d97706; border-color: #fde68a; background: #fffbeb; }
+    .score-low  { color: #dc2626; border-color: #fca5a5; background: #fef2f2; }
+
+    /* Metadata rows */
+    .meta-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 8px;
+      margin-bottom: 14px;
+    }
+    .meta-item {
+      background: #f8fafc;
+      border: 1px solid #e2e8f0;
+      border-radius: 8px;
+      padding: 8px 10px;
+    }
+    .meta-item .m-label {
+      font-size: 10px;
+      color: #64748b;
+      text-transform: uppercase;
+      font-weight: 600;
+    }
+    .meta-item .m-value {
+      font-size: 13px;
+      font-weight: 600;
+      color: #0f172a;
+      margin-top: 2px;
+    }
+
+    /* Badges */
+    .badge {
+      display: inline-block;
+      padding: 5px 12px;
+      border-radius: 20px;
+      font-size: 12px;
+      font-weight: 700;
+      margin-bottom: 12px;
+    }
+    .badge-hot    { background: #dcfce7; color: #15803d; border: 1px solid #86efac; }
+    .badge-warm   { background: #fef3c7; color: #b45309; border: 1px solid #fcd34d; }
+    .badge-cold   { background: #f1f5f9; color: #475569; border: 1px solid #cbd5e1; }
+    .badge-danger { background: #fee2e2; color: #b91c1c; border: 1px solid #fca5a5; }
+
+    .section-title {
+      font-size: 11px;
+      font-weight: 700;
+      color: #075e54;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      margin: 12px 0 6px;
+    }
+    .tag-list { display: flex; flex-wrap: wrap; gap: 6px; }
+    .tag {
+      background: #f1f5f9;
+      border-radius: 14px;
+      padding: 4px 10px;
+      font-size: 12px;
+      color: #1e293b;
+      border: 1px solid #e2e8f0;
+    }
+    .tag.concern { background: #fef2f2; color: #991b1b; border-color: #fecaca; }
+
+    .summary-text {
+      font-size: 13px;
+      color: #334155;
+      line-height: 1.55;
+      background: #f8fafc;
+      padding: 10px;
+      border-radius: 8px;
+      border-left: 3px solid #075e54;
+    }
+    .action-box {
+      font-size: 13px;
+      color: #065f46;
+      background: #ecfdf5;
+      padding: 10px;
+      border-radius: 8px;
+      border: 1px solid #a7f3d0;
+      margin-top: 10px;
+      font-weight: 600;
+    }
+
+    .close-btn {
+      margin-top: 18px;
+      width: 100%;
+      padding: 12px;
+      background: #075e54;
+      color: #ffffff;
+      border: none;
+      border-radius: 10px;
+      font-size: 14px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: background 0.15s ease;
+    }
+    .close-btn:hover { background: #0b7367; }
+
+    /* Spinner */
+    .spinner {
+      width: 36px;
+      height: 36px;
+      border: 3px solid #e2e8f0;
+      border-top-color: #25d366;
+      border-radius: 50%;
+      animation: spin 0.8s linear infinite;
+      margin: 32px auto;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+  </style>
+</head>
+<body>
+
+<div class="app-title-bar">
+  <h1>⚡ Milo Drive Onboarding Assistant</h1>
+  <p>AI Recruiter Nikki • Screening for Gurgaon (Delhi-NCR) & Bangalore Hubs</p>
+</div>
+
+<div class="phone">
+  <!-- Header -->
+  <div class="header">
+    <div class="avatar">🚗</div>
+    <div class="info">
+      <div class="name">Nikki | Milo Drive <span class="verified">✔</span></div>
+      <div class="sub">Online • Driver Onboarding Assistant</div>
+    </div>
+    <div class="header-actions">
+      <button class="analyze-btn" onclick="openAnalysis()" title="Run recruitment semantic analysis">
+        📊 Analyze
+      </button>
+      <button class="reset-btn" onclick="resetChat()" title="Reset session">
+        🔄
+      </button>
+    </div>
+  </div>
+
+  <!-- Hub Banner with Language Selector -->
+  <div class="hub-banner">
+    <div>
+      <span>📍 Hubs:</span>
+      <span class="hub-badge">Gurgaon</span>
+      <span class="hub-badge">Bangalore</span>
+    </div>
+    <div style="display:flex; gap:4px; align-items:center;">
+      <button class="lang-btn" onclick="setLang('English')" title="Chat in English">🇬🇧 English</button>
+      <button class="lang-btn" onclick="setLang('Hindi')" title="Chat in Hindi">🇮🇳 हिंदी</button>
+    </div>
+  </div>
+
+  <!-- Chat area -->
+  <div class="chat-area" id="chatArea">
+    <div class="date-chip" id="dateChip"></div>
+  </div>
+
+  <!-- Input bar -->
+  <div class="input-bar">
+    <textarea id="msgInput" placeholder="Type in English, Hindi, or Hinglish…" rows="1"
+      onkeydown="handleKey(event)" oninput="autoResize(this)"></textarea>
+    <button class="send-btn" onclick="sendMessage()" title="Send">
+      <svg viewBox="0 0 24 24"><path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"/></svg>
+    </button>
+  </div>
+</div>
+
+<!-- Analysis Modal -->
+<div class="modal-overlay" id="modalOverlay">
+  <div class="modal" id="modal">
+    <div class="modal-header">
+      <h2>📋 Milo Drive Candidate Report</h2>
+      <span id="detectedLangBadge" style="font-size:12px; color:#64748b;"></span>
+    </div>
+    <div id="modalContent"><div class="spinner"></div></div>
+    <button class="close-btn" onclick="closeModal()">Close</button>
+  </div>
+</div>
+
+<script>
+  function now() {
+    return new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+  }
+
+  function autoResize(el) {
+    el.style.height = 'auto';
+    el.style.height = Math.min(el.scrollHeight, 90) + 'px';
+  }
+
+  function scrollBottom() {
+    const area = document.getElementById('chatArea');
+    area.scrollTop = area.scrollHeight;
+  }
+
+  function appendMessage(role, text) {
+    const area = document.getElementById('chatArea');
+    const row = document.createElement('div');
+    row.className = `msg-row ${role}`;
+    row.innerHTML = `<div class="bubble">${escapeHtml(text)}<span class="time">${now()}</span></div>`;
+    area.appendChild(row);
+    scrollBottom();
+  }
+
+  function escapeHtml(text) {
+    return (text || '')
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/\n/g, '<br>');
+  }
+
+  let typingEl = null;
+  function showTyping() {
+    const area = document.getElementById('chatArea');
+    const row = document.createElement('div');
+    row.className = 'msg-row bot';
+    row.id = 'typing';
+    row.innerHTML = `<div class="typing-bubble"><span></span><span></span><span></span></div>`;
+    area.appendChild(row);
+    scrollBottom();
+    typingEl = row;
+  }
+  function hideTyping() {
+    if (typingEl) { typingEl.remove(); typingEl = null; }
+  }
+
+  // Date Chip init
+  document.getElementById('dateChip').textContent = new Date().toLocaleDateString([], {
+    weekday: 'short', month: 'short', day: 'numeric'
+  });
+
+  // Initial greeting
+  window.addEventListener('DOMContentLoaded', () => {
+    showTyping();
+    fetch('/chat', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ message: '__init__' })
+    })
+    .then(r => r.json())
+    .then(data => {
+      hideTyping();
+      if (data.reply) appendMessage('bot', data.reply);
+    })
+    .catch(() => {
+      hideTyping();
+      appendMessage('bot', 'Hello! Welcome to Milo Drive. 👋 I am Nikki, how can I help you today?');
+    });
+  });
+
+  function setLang(lang) {
+    const input = document.getElementById('msgInput');
+    if (lang === 'English') {
+      input.value = 'Hi, please assist me in English.';
+    } else {
+      input.value = 'Namaste, mujhe Hindi mein jaankari chahiye.';
+    }
+    sendMessage();
+  }
+
+  async function sendMessage() {
+    const input = document.getElementById('msgInput');
+    const text = input.value.trim();
+    if (!text) return;
+
+    appendMessage('user', text);
+    input.value = '';
+    input.style.height = 'auto';
+    input.disabled = true;
+
+    showTyping();
+    try {
+      const res = await fetch('/chat', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ message: text })
+      });
+      const data = await res.json();
+      hideTyping();
+      if (data.reply) appendMessage('bot', data.reply);
+      if (data.error) appendMessage('bot', '⚠️ ' + data.error);
+    } catch(e) {
+      hideTyping();
+      appendMessage('bot', '⚠️ Network error. Please check your connection.');
+    }
+    input.disabled = false;
+    input.focus();
+  }
+
+  function handleKey(e) {
+    if (e.key === 'Enter' && !e.shiftKey) {
+      e.preventDefault();
+      sendMessage();
+    }
+  }
+
+  async function resetChat() {
+    if (!confirm('Start a new candidate conversation?')) return;
+    await fetch('/reset', { method: 'POST' });
+    document.getElementById('chatArea').innerHTML = '<div class="date-chip" id="dateChip"></div>';
+    document.getElementById('dateChip').textContent = new Date().toLocaleDateString([], {
+      weekday: 'short', month: 'short', day: 'numeric'
+    });
+    showTyping();
+    fetch('/chat', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ message: '__init__' })
+    })
+    .then(r => r.json())
+    .then(data => {
+      hideTyping();
+      if (data.reply) appendMessage('bot', data.reply);
+    });
+  }
+
+  // ── Analysis Modal ──
+  function scoreClass(n) {
+    if (n >= 75) return 'score-high';
+    if (n >= 45) return 'score-mid';
+    return 'score-low';
+  }
+
+  function categoryBadgeClass(cat) {
+    if (!cat) return 'badge-cold';
+    if (cat.includes('Hot') || cat.includes('Booked')) return 'badge-hot';
+    if (cat.includes('Warm') || cat.includes('High')) return 'badge-warm';
+    if (cat.includes('Ineligible') || cat.includes('Waster')) return 'badge-danger';
+    return 'badge-cold';
+  }
+
+  function renderAnalysis(d) {
+    document.getElementById('detectedLangBadge').textContent = d.detected_language ? `🌐 ${d.detected_language}` : '';
+
+    const posHtml = (d.key_positives || []).map(p => `<span class="tag">✅ ${escapeHtml(p)}</span>`).join('');
+    const conHtml = (d.key_concerns || []).map(c => `<span class="tag concern">⚠️ ${escapeHtml(c)}</span>`).join('');
+
+    const licenseBadge = d.has_original_license === true
+      ? '<span style="color:#16a34a; font-weight:700;">✔ Original Available</span>'
+      : (d.has_original_license === false
+        ? '<span style="color:#dc2626; font-weight:700;">✖ No License</span>'
+        : '<span style="color:#64748b;">Not Confirmed</span>');
+
+    document.getElementById('modalContent').innerHTML = `
+      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;">
+        <span class="badge ${categoryBadgeClass(d.lead_category)}">${escapeHtml(d.lead_category || 'Lead')}</span>
+        <span style="font-size:12px; color:#64748b;">Sentiment: <strong>${escapeHtml(d.sentiment || '—')}</strong></span>
+      </div>
+
+      <div class="scores">
+        <div class="score-card ${scoreClass(d.interest_score || 0)}">
+          <div class="label">Interest</div>
+          <div class="value">${d.interest_score ?? '—'}</div>
+        </div>
+        <div class="score-card ${scoreClass(d.eligibility_score || 0)}">
+          <div class="label">Eligibility</div>
+          <div class="value">${d.eligibility_score ?? '—'}</div>
+        </div>
+        <div class="score-card ${scoreClass(d.overall_score || 0)}">
+          <div class="label">Overall</div>
+          <div class="value">${d.overall_score ?? '—'}</div>
+        </div>
+      </div>
+
+      <div class="meta-grid">
+        <div class="meta-item">
+          <div class="m-label">Target Hub</div>
+          <div class="m-value">${escapeHtml(d.target_hub || 'Unspecified')}</div>
+        </div>
+        <div class="meta-item">
+          <div class="m-label">Hub Visit Status</div>
+          <div class="m-value">${escapeHtml(d.hub_visit_status || 'Not Booked')}</div>
+        </div>
+        <div class="meta-item">
+          <div class="m-label">Driving License</div>
+          <div class="m-value">${licenseBadge}</div>
+        </div>
+        <div class="meta-item">
+          <div class="m-label">Visit Slot / Date</div>
+          <div class="m-value" style="font-size:12px;">${escapeHtml(d.hub_visit_details || 'Pending')}</div>
+        </div>
+        <div class="meta-item">
+          <div class="m-label">Experience & Cars</div>
+          <div class="m-value" style="font-size:12px;">${escapeHtml((d.experience_years ? d.experience_years + ' • ' : '') + (d.vehicles_driven || 'Not specified'))}</div>
+        </div>
+        <div class="meta-item">
+          <div class="m-label">Fuel & KM Driven</div>
+          <div class="m-value" style="font-size:12px;">${escapeHtml((d.fuel_types_experienced || '—') + (d.km_driven_approx ? ' (' + d.km_driven_approx + ')' : ''))}</div>
+        </div>
+        <div class="meta-item">
+          <div class="m-label">Work Schedule</div>
+          <div class="m-value" style="font-size:12px;">${escapeHtml((d.working_days_per_week || '—') + (d.daily_hours_commitment ? ' • ' + d.daily_hours_commitment : ''))}</div>
+        </div>
+        <div class="meta-item">
+          <div class="m-label">Expected Salary / Month</div>
+          <div class="m-value" style="font-size:12px; color:#0d4a34;">${escapeHtml(d.expected_monthly_salary || 'Not specified')}</div>
+        </div>
+        <div class="meta-item">
+          <div class="m-label">App Experience</div>
+          <div class="m-value" style="font-size:12px;">${escapeHtml(d.ride_apps_experience || 'None / Not asked')}</div>
+        </div>
+        <div class="meta-item">
+          <div class="m-label">Owns Personal Vehicle?</div>
+          <div class="m-value" style="font-size:12px;">${d.owns_vehicle === true ? 'Yes' : (d.owns_vehicle === false ? 'No (Milo provides)' : 'Not mentioned')}</div>
+        </div>
+      </div>
+
+      ${posHtml ? `<div class="section-title">Key Strengths</div><div class="tag-list">${posHtml}</div>` : ''}
+      ${conHtml ? `<div class="section-title">Concerns / Red Flags</div><div class="tag-list">${conHtml}</div>` : ''}
+
+      <div class="section-title">Summary</div>
+      <p class="summary-text">${escapeHtml(d.summary || 'No summary available.')}</p>
+
+      ${d.next_action_for_team ? `
+        <div class="section-title">Action for Milo Drive Team</div>
+        <div class="action-box">👉 ${escapeHtml(d.next_action_for_team)}</div>
+      ` : ''}
+    `;
+  }
+
+  async function openAnalysis() {
+    document.getElementById('modalContent').innerHTML = '<div class="spinner"></div>';
+    document.getElementById('modalOverlay').classList.add('open');
+
+    try {
+      const res = await fetch('/analyze', { method: 'POST' });
+      const data = await res.json();
+      if (data.error) {
+        document.getElementById('modalContent').innerHTML = `<p style="color:#c00; font-size:14px;">⚠️ ${escapeHtml(data.error)}</p>`;
+      } else {
+        renderAnalysis(data);
+      }
+    } catch(e) {
+      document.getElementById('modalContent').innerHTML = '<p style="color:#c00; font-size:14px;">⚠️ Network error fetching analysis.</p>';
+    }
+  }
+
+  function closeModal() {
+    document.getElementById('modalOverlay').classList.remove('open');
+  }
+  document.getElementById('modalOverlay').addEventListener('click', e => {
+    if (e.target === e.currentTarget) closeModal();
+  });
+</script>
+</body>
+</html>
