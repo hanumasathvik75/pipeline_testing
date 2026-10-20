@@ -182,6 +182,33 @@
       background: #166534;
       color: #ffffff;
     }
+    .kyc-pill {
+      background: #ffffff;
+      border: 1px solid #cbd5e1;
+      border-radius: 12px;
+      padding: 3px 8px;
+      font-size: 10.5px;
+      font-weight: 600;
+      color: #64748b;
+      white-space: nowrap;
+      transition: all 0.2s ease;
+      display: inline-flex;
+      align-items: center;
+      gap: 3px;
+    }
+    .kyc-pill.verified {
+      background: #dcfce7;
+      border-color: #22c55e;
+      color: #15803d;
+      font-weight: 700;
+    }
+    .kyc-pill.failed {
+      background: #fee2e2;
+      border-color: #ef4444;
+      color: #b91c1c;
+      font-weight: 700;
+    }
+
     .lang-btn {
       background: #ffffff;
       border: 1px solid #c2e2d0;
@@ -575,6 +602,7 @@
     <div class="hub-banner-left">
       <button class="mode-btn" onclick="selectOption('1')" title="1. Driver Onboarding">🚗 1. Driver</button>
       <button class="mode-btn" onclick="selectOption('2')" title="2. Book a Ride">🚖 2. Book Ride</button>
+      <span class="kyc-pill" id="kycPill">🪪 KYC: Ready</span>
       <button class="hub-btn" onclick="selectHub('Gurgaon')" title="Gurgaon Hub (Delhi-NCR)">📍 Gurgaon</button>
       <button class="hub-btn" onclick="selectHub('Bangalore')" title="Bangalore Hub (Pilot)">📍 Bangalore</button>
     </div>
@@ -633,6 +661,20 @@
     row.innerHTML = `<div class="bubble">${escapeHtml(text)}<span class="time">${now()}</span></div>`;
     area.appendChild(row);
 
+    // Mock KYC Pill status update
+    if (role === 'bot') {
+      const pill = document.getElementById('kycPill');
+      if (pill) {
+        if (text.includes('MOCK KYC VERIFIED') || text.includes('[MOCK KYC VERIFIED]')) {
+          pill.textContent = '🪪 KYC: ✅ Verified';
+          pill.className = 'kyc-pill verified';
+        } else if (text.includes('MOCK KYC: FAILED') || text.includes('MOCK KYC Result: Failed') || text.includes('FAILED / INELIGIBLE')) {
+          pill.textContent = '🪪 KYC: ❌ Ineligible';
+          pill.className = 'kyc-pill failed';
+        }
+      }
+    }
+
     // Dynamic Quick Reply Chips
     if (role === 'bot') {
       const lower = text.toLowerCase();
@@ -643,6 +685,17 @@
         chips.innerHTML = `
           <button class="chip-btn" onclick="selectOption('1')">🚗 1. Driver Onboarding</button>
           <button class="chip-btn" onclick="selectOption('2')">🚖 2. Book a Ride</button>
+        `;
+        area.appendChild(chips);
+      }
+      // If bot asks for Mock KYC details (Name & DL)
+      else if ((lower.includes('mock kyc') || lower.includes('kyc')) && (lower.includes('licence') || lower.includes('license') || lower.includes('dl'))) {
+        const chips = document.createElement('div');
+        chips.className = 'quick-chips';
+        chips.innerHTML = `
+          <button class="chip-btn" onclick="sendQuickText('My name is Rajesh, and I have a valid Commercial DL')">📄 Valid Commercial DL</button>
+          <button class="chip-btn" onclick="sendQuickText('My name is Amit, and I have a valid Private LMV DL')">🚗 Valid Private LMV</button>
+          <button class="chip-btn" onclick="sendQuickText('I do not have a driving license yet')">❌ No License</button>
         `;
         area.appendChild(chips);
       }
@@ -793,6 +846,11 @@
   async function resetChat() {
     if (!confirm('Start a new candidate conversation?')) return;
     await fetch('/reset', { method: 'POST' });
+    const pill = document.getElementById('kycPill');
+    if (pill) {
+      pill.textContent = '🪪 KYC: Ready';
+      pill.className = 'kyc-pill';
+    }
     document.getElementById('chatArea').innerHTML = '<div class="date-chip" id="dateChip"></div>';
     document.getElementById('dateChip').textContent = new Date().toLocaleDateString([], {
       weekday: 'short', month: 'short', day: 'numeric'
@@ -863,6 +921,15 @@
         </div>
       `;
     } else {
+      const kycStatus = (d.mock_kyc && d.mock_kyc.status) || (d.has_original_license === true ? 'Verified' : 'Pending');
+      const kycBadge = kycStatus === 'Verified'
+        ? '<span style="color:#16a34a; font-weight:700;">✔ Verified (Mock)</span>'
+        : (kycStatus.includes('Failed')
+          ? '<span style="color:#dc2626; font-weight:700;">✖ Failed (No DL)</span>'
+          : '<span style="color:#f59e0b; font-weight:700;">⏳ Incomplete</span>');
+
+      const verifiedDriver = (d.mock_kyc && d.mock_kyc.driver_name) || d.candidate_name || 'Not provided';
+
       const licenseBadge = d.has_original_license === true
         ? '<span style="color:#16a34a; font-weight:700;">✔ Original Available</span>'
         : (d.has_original_license === false
@@ -870,6 +937,14 @@
           : '<span style="color:#64748b;">Not Confirmed</span>');
 
       gridHtml = `
+        <div class="meta-item">
+          <div class="m-label">Mock KYC Status</div>
+          <div class="m-value">${kycBadge}</div>
+        </div>
+        <div class="meta-item">
+          <div class="m-label">Driver Name</div>
+          <div class="m-value" style="font-weight:600;">${escapeHtml(verifiedDriver)}</div>
+        </div>
         <div class="meta-item">
           <div class="m-label">Target Hub</div>
           <div class="m-value">${escapeHtml(d.target_hub || 'Unspecified')}</div>

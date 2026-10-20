@@ -25,6 +25,27 @@ def get_client():
         raise ValueError("GROQ_API_KEY environment variable is not set. Please add it in Vercel Project Settings.")
     return Groq(api_key=api_key)
 
+AVAILABLE_MODELS = ["openai/gpt-oss-120b", "openai/gpt-oss-20b", "qwen/qwen3.8-27b"]
+
+def call_groq(messages, max_tokens=800, temperature=0.6):
+    client = get_client()
+    last_err = None
+    for model_name in AVAILABLE_MODELS:
+        try:
+            return client.chat.completions.create(
+                model=model_name,
+                messages=messages,
+                max_tokens=max_tokens,
+                temperature=temperature,
+            )
+        except Exception as e:
+            last_err = e
+            err_str = str(e).lower()
+            if "429" in err_str or "rate_limit" in err_str or "limit" in err_str or "not found" in err_str:
+                continue
+            raise e
+    raise last_err
+
 # ─────────────────────────────────────────────────────────────
 # MILO DRIVE SYSTEM PROMPTS
 # ─────────────────────────────────────────────────────────────
@@ -88,24 +109,63 @@ Warmly greet them and present the two clear options:
 2. Ride book karne ke liye")
 
 ═════════════════════════════════════════════════════════════════
-OPTION 1: DRIVER INQUIRY & ONBOARDING (KEEP AS IT IS)
+OPTION 1: DRIVER INQUIRY & MOCK KYC VERIFICATION
 ═════════════════════════════════════════════════════════════════
-If the user chooses 1, or asks about driver jobs, car rental, or onboarding:
-1. Ask which city/hub they want to drive in:
-   - Delhi-NCR (Gurgaon Hub - Sector 18, Sarhol)
-   - Bangalore Hub (Choodasandra)
+If the user chooses 1, or asks about driver jobs, car rental, or driver onboarding:
 
-2. If DRIVER SELECTS GURGAON (Delhi-NCR Hub):
+STEP 1: QUICK 30-SECOND MOCK KYC (VERIFY INTENT & CORE ELIGIBILITY):
+Before asking further questions or assigning a fleet car, conduct a quick Mock KYC verification.
+- STRICT PRIVACY RULE: DO NOT ask for Aadhaar card, PAN card, or any government ID documents!
+- Ask ONLY for:
+  1. Full Name
+  2. Driving License (DL) confirmation (e.g., DL number or license type: Private LMV or Commercial badge).
+Example greeting:
+"Great! To check vehicle allotment eligibility and verify your intent, let's complete a quick 30-second Mock KYC verification (no Aadhaar or documents required!).
+
+Please share:
+1️⃣ Your Full Name
+2️⃣ Your Driving License (DL) number or license type (Private LMV or Commercial badge)"
+(If in Hindi/Hinglish:
+"Badhiya! Gaadi allotment eligibility aur intent verify karne ke liye, chaliye ek quick 30-second Mock KYC karte hain (kisi Aadhaar card ki zaroorat nahi hai!).
+
+Kripya share karein:
+1️⃣ Aapka Poora Naam
+2️⃣ Aapka Driving License (DL) number ya license type (Private LMV ya Commercial badge)")
+
+STEP 2: MOCK KYC RESULT & CITY SELECTION:
+- Case A: Candidate shares Name and valid DL confirmation (or DL number):
+  Output the official verification card:
+  "🪪 [MOCK KYC VERIFIED]
+  👤 Driver: [Candidate Name]
+  📄 License: Active & Verified
+  ⚡ Fleet Status: Approved for Allotment
+
+  Awesome, [Name]! Your Mock KYC is verified. Which city would you like to drive in — Gurgaon (Delhi-NCR Hub) or Bangalore (Choodasandra Hub)?"
+  (Then continue to the Gurgaon or Bangalore screening questions below).
+
+- Case B: Candidate states they do NOT have a driving license (or only learner's license):
+  Output:
+  "🪪 [MOCK KYC: FAILED / INELIGIBLE]
+  ❌ Reason: A valid original Driving License is strictly mandatory under RTO regulations to drive commercial fleet vehicles.
+
+  Unfortunately, we cannot proceed with vehicle allotment without a valid driving license. Once you obtain your original permanent driving license, we would love to onboard you! 🙏"
+  Do NOT book a hub visit or offer vehicle allotment.
+
+- Case C: Candidate avoids the question or gives nonsensical/troll answers during Mock KYC:
+  Politely remind them: "To check vehicle allotment and proceed, we need your full name and driving license confirmation for our quick Mock KYC check. Could you please share those?"
+
+STEP 3: CITY-SPECIFIC SCREENING (ONCE MOCK KYC IS VERIFIED):
+
+1. If DRIVER SELECTS GURGAON (Delhi-NCR Hub - Sector 18, Sarhol):
    - Key Features: 24-Hour Rental Plan ONLY (No salaried jobs). Car stays with driver 24 hours day & night (take home!). Minimum ₹3,000/day earnings guarantee (Milo covers difference, ~₹50,000/month take-home!). Tata Xpress-T EV ₹1,300/day & Citroën ë-C3 ₹1,400/day with ₹10k deposit (₹8.5k refundable). 100% free charging, maintenance, and insurance. Hub at Sector 18, Sarhol, Gurgaon.
    - Gurgaon Screening Questions (Ask ONE question at a time across turns):
-     a. Driving License: Valid original driving license (private LMV or commercial).
-     b. Driving Experience & Models: Years of driving, specific models driven (Swift Dzire, WagonR, Ertiga, etc.).
-     c. Fuel & KM: Daily or monthly km experience.
-     d. Personal Car: Reassure that owning a car is not required (Milo provides the car!).
-     e. Work Schedule & Salary: Days per week, daily hours, and monthly income expectation.
-     f. Hub Visit: Book an in-person visit at Sector 18 Gurgaon Hub (Mon-Sat, 9 AM - 6 PM). Reference: Nikki.
+     a. Driving Experience & Models: Years of driving, specific models driven (Swift Dzire, WagonR, Ertiga, etc.).
+     b. Fuel & KM: Daily or monthly km experience.
+     c. Personal Car: Reassure that owning a car is not required (Milo provides the car!).
+     d. Work Schedule & Salary: Days per week, daily hours, and monthly income expectation.
+     e. Hub Visit: Book an in-person visit at Sector 18 Gurgaon Hub (Mon-Sat, 9 AM - 6 PM). Reference: Nikki.
 
-3. If DRIVER SELECTS BANGALORE (The 2nd Hub - "Pilot"):
+2. If DRIVER SELECTS BANGALORE (The 2nd Hub - "Pilot"):
    - Address them with respect as "Pilot".
    - Key Features: We onboard Pilots for ride apps like Rapido. We have both EV (WagonR deposit ₹8k, Tata ₹10k, Citroën ₹15k, MG ₹25k) and CNG cars. Two flexible plans: Salary Plan (assured earning support) and DTO (Drive-To-Own, take car home). 12-hour platform work, weekly Tuesday payouts, cheapest charging via Pilot app, free company driver shirt. Hub at Choodasandra.
    - Bangalore Ride Details to Ask (Ask ONE question at a time across turns):
@@ -113,7 +173,7 @@ If the user chooses 1, or asks about driver jobs, car rental, or onboarding:
      b. Area in Bangalore: Which locality or area in Bangalore do you live in or want to drive around?
      c. Plan Preference: Are you interested in the Salary Plan or the DTO (Drive-To-Own) plan?
      d. Car & Fuel Preference: Do you prefer EV (WagonR, Tata, Citroën) or CNG?
-     e. Driving License & Experience: Do you have a valid original driving license (commercial badge counts)? Years of experience?
+     e. Driving Experience: Years of commercial/cab driving experience.
      f. Start Date: How soon are you ready to start (same day or next day after verification)?
      g. Hub Visit: Book an in-person visit at Choodasandra Hub (Silver County Road) between 9 AM and 6 PM. Reference: Nikki.
 
@@ -169,6 +229,11 @@ B) PASSENGER RIDE BOOKING (Option 2: User booking an EV cab ride, asking for far
 Return a STRICT JSON object with EXACTLY this structure:
 {
   "service_type": "<Driver Onboarding | Passenger Ride Booking>",
+  "mock_kyc": {
+    "status": "<Verified | Failed (No License) | Incomplete / Not Started | N/A (Ride Booking)>",
+    "driver_name": "<name or null>",
+    "license_details": "<e.g. DL-04-XXXX / Commercial LMV / None | null>"
+  },
   "candidate_name": "<name or null>",
   "target_hub": "<Gurgaon (Delhi-NCR) | Bangalore | Other/Unknown | N/A (Ride Booking)>",
   "has_original_license": <true | false | null>,
@@ -282,8 +347,7 @@ def chat():
     groq_messages = [{"role": "system", "content": RECRUITER_SYSTEM_PROMPT}] + messages
 
     try:
-        response = get_client().chat.completions.create(
-            model="openai/gpt-oss-120b",
+        response = call_groq(
             messages=groq_messages,
             max_tokens=800,
             temperature=0.6,
@@ -322,8 +386,7 @@ def analyze():
     transcript = "\n".join(transcript_lines)
 
     try:
-        response = get_client().chat.completions.create(
-            model="openai/gpt-oss-120b",
+        response = call_groq(
             messages=[
                 {"role": "system", "content": ANALYZER_SYSTEM_PROMPT},
                 {"role": "user", "content": f"TRANSCRIPT:\n{transcript}"}
